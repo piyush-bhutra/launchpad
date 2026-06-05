@@ -1,49 +1,52 @@
-import { useMemo, useState } from "react";
-import Navbar from "../components/Navbar.jsx";
-import OpportunityCard from "../components/OpportunityCard.jsx";
-import { Search, SlidersHorizontal, Inbox } from "lucide-react";
+import { useEffect, useMemo, useState } from 'react';
+import Navbar from '../components/Navbar.jsx';
+import OpportunityCard from '../components/OpportunityCard.jsx';
+import LoadingSpinner from '../components/LoadingSpinner.jsx';
+import api, { mapOpportunity } from '../lib/api.js';
+import { Search, SlidersHorizontal, Inbox } from 'lucide-react';
 
-const MOCK = [
-  { id: 1, title: "Software Engineering Intern — Summer 2026", organization: "Google", type: "Internship", matchScore: 92, deadline: "Jun 18, 2026", skills: ["DSA", "Python", "System Design"], status: "Applied" },
-  { id: 2, title: "Full-time SDE — Graduate Program", organization: "Atlassian", type: "Placement", matchScore: 87, deadline: "Jun 14, 2026", skills: ["Java", "React", "AWS"], status: "In Progress" },
-  { id: 3, title: "ML Research Intern — Vision Lab", organization: "IISc Bangalore", type: "Research", matchScore: 81, deadline: "Jun 22, 2026", skills: ["PyTorch", "CV", "Python"], status: "Saved" },
-  { id: 4, title: "Smart India Hackathon 2026", organization: "Ministry of Education", type: "Hackathon", matchScore: 74, deadline: "Jul 02, 2026", skills: ["Team", "MVP"], status: "Not Started" },
-  { id: 5, title: "Quant Research Intern", organization: "Tower Research Capital", type: "Internship", matchScore: 78, deadline: "Jun 25, 2026", skills: ["C++", "Probability", "Python"], status: "Saved" },
-  { id: 6, title: "Product Analyst — Campus Hire", organization: "Razorpay", type: "Placement", matchScore: 69, deadline: "Jun 30, 2026", skills: ["SQL", "Excel"], status: "Not Started" },
-  { id: 7, title: "Frontend Engineer Intern", organization: "Vercel", type: "Internship", matchScore: 88, deadline: "Jul 10, 2026", skills: ["React", "TypeScript", "Next.js"], status: "Saved" },
-  { id: 8, title: "Climate Tech Hackathon", organization: "MIT Solve", type: "Hackathon", matchScore: 64, deadline: "Jul 15, 2026", skills: ["Sustainability", "MVP"], status: "Not Started" },
-  { id: 9, title: "NLP Research Assistant", organization: "IIIT Hyderabad", type: "Research", matchScore: 83, deadline: "Jun 28, 2026", skills: ["Python", "Transformers"], status: "In Progress" },
-  { id: 10, title: "Backend SDE — New Grad", organization: "Stripe", type: "Placement", matchScore: 90, deadline: "Jul 05, 2026", skills: ["Go", "Distributed Systems"], status: "Applied" },
-];
-
-const TYPES = ["All", "Internship", "Placement", "Research", "Hackathon"];
+const TYPES = ['All', 'Internship', 'Placement', 'Research', 'Hackathon'];
 const MATCH_RANGES = [
-  { label: "Any match", min: 0 },
-  { label: "70%+", min: 70 },
-  { label: "80%+", min: 80 },
-  { label: "90%+", min: 90 },
+  { label: 'Any match', min: 0 },
+  { label: '70%+', min: 70 },
+  { label: '80%+', min: 80 },
+  { label: '90%+', min: 90 },
 ];
 
 export default function Opportunities() {
-  const [query, setQuery] = useState("");
-  const [type, setType] = useState("All");
+  const [query, setQuery] = useState('');
+  const [type, setType] = useState('All');
   const [minMatch, setMinMatch] = useState(0);
+  const [opportunities, setOpportunities] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchOpportunities = async () => {
+      setLoading(true);
+      try {
+        const params = {};
+        if (type !== 'All') params.type = type;
+        if (query.trim()) params.search = query.trim();
+
+        const { data } = await api.get('/api/opportunities', { params });
+        setOpportunities(data.map(mapOpportunity));
+      } catch (err) {
+        console.error('Opportunities fetch error:', err.message);
+        setOpportunities([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const debounce = setTimeout(fetchOpportunities, 300);
+    return () => clearTimeout(debounce);
+  }, [query, type]);
 
   const results = useMemo(() => {
-    return MOCK.filter((o) => {
-      const matchesType = type === "All" || o.type === type;
-      const matchesScore = o.matchScore >= minMatch;
-      const q = query.trim().toLowerCase();
-      const matchesQuery =
-        !q ||
-        o.title.toLowerCase().includes(q) ||
-        o.organization.toLowerCase().includes(q) ||
-        o.skills.some((s) => s.toLowerCase().includes(q));
-      return matchesType && matchesScore && matchesQuery;
-    });
-  }, [query, type, minMatch]);
+    return opportunities.filter((o) => o.matchScore >= minMatch);
+  }, [opportunities, minMatch]);
 
-  const reset = () => { setQuery(""); setType("All"); setMinMatch(0); };
+  const reset = () => { setQuery(''); setType('All'); setMinMatch(0); };
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -56,7 +59,6 @@ export default function Opportunities() {
           </p>
         </div>
 
-        {/* Filters bar */}
         <section className="mt-8 rounded-2xl border border-border bg-white p-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="relative w-full lg:max-w-md">
@@ -76,8 +78,8 @@ export default function Opportunities() {
                   onClick={() => setType(t)}
                   className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
                     type === t
-                      ? "bg-primary text-primary-foreground"
-                      : "border border-border bg-white text-muted-foreground hover:text-foreground"
+                      ? 'bg-primary text-primary-foreground'
+                      : 'border border-border bg-white text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   {t}
@@ -96,8 +98,8 @@ export default function Opportunities() {
                 onClick={() => setMinMatch(r.min)}
                 className={`rounded-full px-3 py-1 text-xs font-medium transition ${
                   minMatch === r.min
-                    ? "bg-primary-50 text-primary-700 ring-1 ring-inset ring-primary-100"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? 'bg-primary-50 text-primary-700 ring-1 ring-inset ring-primary-100'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {r.label}
@@ -106,22 +108,22 @@ export default function Opportunities() {
           </div>
         </section>
 
-        {/* Results count */}
         <div className="mt-6 flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Showing <span className="font-semibold text-foreground">{results.length}</span> of{" "}
-            <span className="font-semibold text-foreground">{MOCK.length}</span> opportunities
+            Showing <span className="font-semibold text-foreground">{results.length}</span> of{' '}
+            <span className="font-semibold text-foreground">{opportunities.length}</span> opportunities
           </p>
-          {(query || type !== "All" || minMatch > 0) && (
+          {(query || type !== 'All' || minMatch > 0) && (
             <button onClick={reset} className="text-sm font-medium text-primary hover:text-primary-700">
               Clear filters
             </button>
           )}
         </div>
 
-        {/* Grid / empty */}
         <section className="mt-4">
-          {results.length === 0 ? (
+          {loading ? (
+            <LoadingSpinner label="Loading opportunities" />
+          ) : results.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-border bg-white py-16 text-center">
               <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-primary-50 text-primary-700">
                 <Inbox className="h-6 w-6" />

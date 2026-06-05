@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
-import Navbar from "../components/Navbar.jsx";
-import OpportunityCard from "../components/OpportunityCard.jsx";
-import LoadingSpinner from "../components/LoadingSpinner.jsx";
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import Navbar from '../components/Navbar.jsx';
+import OpportunityCard from '../components/OpportunityCard.jsx';
+import LoadingSpinner from '../components/LoadingSpinner.jsx';
+import api, { mapOpportunity } from '../lib/api.js';
 import {
   Briefcase,
   CalendarClock,
@@ -11,84 +13,7 @@ import {
   Inbox,
   RefreshCw,
   Search,
-} from "lucide-react";
-
-const MOCK_OPPORTUNITIES = [
-  {
-    id: 1,
-    title: "Software Engineering Intern — Summer 2026",
-    organization: "Google",
-    type: "Internship",
-    matchScore: 92,
-    deadline: "Jun 18, 2026",
-    skills: ["DSA", "Python", "System Design", "Distributed Systems"],
-    status: "Applied",
-    link: "#",
-  },
-  {
-    id: 2,
-    title: "Full-time SDE — Graduate Program",
-    organization: "Atlassian",
-    type: "Placement",
-    matchScore: 87,
-    deadline: "Jun 14, 2026",
-    skills: ["Java", "React", "AWS"],
-    status: "In Progress",
-    link: "#",
-  },
-  {
-    id: 3,
-    title: "ML Research Intern — Vision Lab",
-    organization: "IISc Bangalore",
-    type: "Research",
-    matchScore: 81,
-    deadline: "Jun 22, 2026",
-    skills: ["PyTorch", "Computer Vision", "Python"],
-    status: "Saved",
-    link: "#",
-  },
-  {
-    id: 4,
-    title: "Smart India Hackathon 2026",
-    organization: "Ministry of Education",
-    type: "Hackathon",
-    matchScore: 74,
-    deadline: "Jul 02, 2026",
-    skills: ["Team", "MVP", "Pitch"],
-    status: "Not Started",
-    link: "#",
-  },
-  {
-    id: 5,
-    title: "Quant Research Intern",
-    organization: "Tower Research Capital",
-    type: "Internship",
-    matchScore: 78,
-    deadline: "Jun 25, 2026",
-    skills: ["C++", "Probability", "Statistics", "Python"],
-    status: "Saved",
-    link: "#",
-  },
-  {
-    id: 6,
-    title: "Product Analyst — Campus Hire",
-    organization: "Razorpay",
-    type: "Placement",
-    matchScore: 69,
-    deadline: "Jun 30, 2026",
-    skills: ["SQL", "Excel", "Analytics"],
-    status: "Not Started",
-    link: "#",
-  },
-];
-
-const STATS = [
-  { label: "Total Opportunities", value: "128", icon: Briefcase, hint: "+18 this week" },
-  { label: "Upcoming Deadlines", value: "7", icon: CalendarClock, hint: "3 within 5 days" },
-  { label: "Applied", value: "12", icon: CheckCircle2, hint: "4 awaiting reply" },
-  { label: "Avg. Match Score", value: "82%", icon: Gauge, hint: "+6% vs last month" },
-  { label: "New Opportunities", value: "24", icon: Sparkles, hint: "Last 24 hours" },
-];
+} from 'lucide-react';
 
 function StatCard({ label, value, icon: Icon, hint }) {
   return (
@@ -128,44 +53,78 @@ function EmptyState({ onRefresh }) {
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [opportunities, setOpportunities] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [search, setSearch] = useState('');
+
+  const fetchData = async (searchQuery = '') => {
+    setLoading(true);
+    try {
+      const params = searchQuery ? { search: searchQuery } : {};
+      const [oppRes, statsRes, profileRes] = await Promise.all([
+        api.get('/api/opportunities', { params }),
+        api.get('/api/opportunities/stats'),
+        api.get('/api/profile').catch(() => ({ data: null })),
+      ]);
+
+      setOpportunities(oppRes.data.map(mapOpportunity));
+      setStats(statsRes.data);
+      setProfile(profileRes.data);
+    } catch (err) {
+      console.error('Dashboard fetch error:', err.message);
+      setOpportunities([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const t = setTimeout(() => {
-      setOpportunities(MOCK_OPPORTUNITIES);
-      setLoading(false);
-    }, 700);
-    return () => clearTimeout(t);
+    fetchData();
   }, []);
 
-  const handleRefresh = () => {
-    setLoading(true);
-    setOpportunities([]);
-    setTimeout(() => {
-      setOpportunities(MOCK_OPPORTUNITIES);
-      setLoading(false);
-    }, 700);
+  const handleRefresh = () => fetchData(search);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    fetchData(search);
   };
+
+  const upcomingCount =
+    (stats?.byStatus?.New || 0) + (stats?.byStatus?.Interested || 0);
+
+  const statCards = stats
+    ? [
+        { label: 'Total Opportunities', value: String(stats.total), icon: Briefcase, hint: 'From your inbox' },
+        { label: 'Upcoming Deadlines', value: String(upcomingCount), icon: CalendarClock, hint: 'Active opportunities' },
+        { label: 'Applied', value: String(stats.byStatus?.Applied || 0), icon: CheckCircle2, hint: 'Applications submitted' },
+        { label: 'Avg. Match Score', value: `${stats.averageMatchPercentage}%`, icon: Gauge, hint: 'Based on your profile' },
+        { label: 'New Opportunities', value: String(stats.byStatus?.New || 0), icon: Sparkles, hint: 'Awaiting review' },
+      ]
+    : [];
+
+  const displayName = profile?.name?.split(' ')[0] || 'there';
 
   return (
     <div className="min-h-screen bg-muted/30">
       <Navbar />
       <main className="mx-auto max-w-7xl px-6 py-10">
-        {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight">Welcome back, Aarav</h1>
+            <h1 className="text-3xl font-semibold tracking-tight">Welcome back, {displayName}</h1>
             <p className="mt-1 text-muted-foreground">
               Here's what Launchpad surfaced from your inbox today.
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="relative">
+            <form onSubmit={handleSearch} className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search opportunities…"
                 className="w-72 rounded-xl border border-border bg-white py-2.5 pl-9 pr-3 text-sm outline-none ring-primary/30 focus:ring-2"
               />
-            </div>
+            </form>
             <button
               onClick={handleRefresh}
               className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary-700"
@@ -175,12 +134,10 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Stat cards */}
         <section className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {STATS.map((s) => <StatCard key={s.label} {...s} />)}
+          {statCards.map((s) => <StatCard key={s.label} {...s} />)}
         </section>
 
-        {/* Recent opportunities */}
         <section className="mt-12">
           <div className="flex items-end justify-between">
             <div>
@@ -189,9 +146,9 @@ export default function Dashboard() {
                 Curated from your latest inbox scan, ranked by match score.
               </p>
             </div>
-            <a href="/opportunities" className="text-sm font-medium text-primary hover:text-primary-700">
+            <Link to="/opportunities" className="text-sm font-medium text-primary hover:text-primary-700">
               View all →
-            </a>
+            </Link>
           </div>
 
           <div className="mt-6">
@@ -201,9 +158,12 @@ export default function Dashboard() {
               <EmptyState onRefresh={handleRefresh} />
             ) : (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {opportunities.slice(0, 6).map((o) => (
-                  <OpportunityCard key={o.id} opportunity={o} />
-                ))}
+                {[...opportunities]
+                  .sort((a, b) => b.matchScore - a.matchScore)
+                  .slice(0, 6)
+                  .map((o) => (
+                    <OpportunityCard key={o.id} opportunity={o} />
+                  ))}
               </div>
             )}
           </div>

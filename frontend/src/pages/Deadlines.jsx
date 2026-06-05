@@ -1,32 +1,15 @@
-import Navbar from "../components/Navbar.jsx";
-import DeadlineCard from "../components/DeadlineCard.jsx";
-import { CalendarCheck2, CalendarClock, CalendarDays, History } from "lucide-react";
+import { useEffect, useState } from 'react';
+import Navbar from '../components/Navbar.jsx';
+import DeadlineCard from '../components/DeadlineCard.jsx';
+import LoadingSpinner from '../components/LoadingSpinner.jsx';
+import api, { mapDeadline } from '../lib/api.js';
+import { CalendarCheck2, CalendarClock, CalendarDays, History } from 'lucide-react';
 
-const DATA = {
-  today: [
-    { id: 1, title: "Atlassian OA submission", organization: "Atlassian", type: "Placement", dueDate: "Today, 11:59 PM", dueLabel: "Today" },
-    { id: 2, title: "Google STEP application", organization: "Google", type: "Internship", dueDate: "Today, 6:00 PM", dueLabel: "Today" },
-  ],
-  thisWeek: [
-    { id: 3, title: "Microsoft Engage cover letter", organization: "Microsoft", type: "Internship", dueDate: "Jun 10, 2026", dueLabel: "in 3 days" },
-    { id: 4, title: "Goldman Sachs final round prep", organization: "Goldman Sachs", type: "Placement", dueDate: "Jun 11, 2026", dueLabel: "in 4 days" },
-    { id: 5, title: "Smart India Hackathon team registration", organization: "MoE", type: "Hackathon", dueDate: "Jun 12, 2026", dueLabel: "in 5 days" },
-  ],
-  thisMonth: [
-    { id: 6, title: "ISRO research proposal", organization: "ISRO", type: "Research", dueDate: "Jun 22, 2026", dueLabel: "in 17 days" },
-    { id: 7, title: "Stripe new-grad SDE", organization: "Stripe", type: "Placement", dueDate: "Jun 28, 2026", dueLabel: "in 23 days" },
-  ],
-  expired: [
-    { id: 8, title: "Adobe MAX student pass", organization: "Adobe", type: "Internship", dueDate: "May 28, 2026", dueLabel: "expired" },
-    { id: 9, title: "DRDO summer internship", organization: "DRDO", type: "Research", dueDate: "May 20, 2026", dueLabel: "expired" },
-  ],
-};
-
-function SectionHeader({ icon: Icon, title, count, tone = "default" }) {
+function SectionHeader({ icon: Icon, title, count, tone = 'default' }) {
   const tones = {
-    default: "bg-primary-50 text-primary-700",
-    urgent: "bg-red-50 text-red-600",
-    muted: "bg-muted text-muted-foreground",
+    default: 'bg-primary-50 text-primary-700',
+    urgent: 'bg-red-50 text-red-600',
+    muted: 'bg-muted text-muted-foreground',
   };
   return (
     <div className="flex items-center justify-between">
@@ -50,7 +33,30 @@ function EmptySection({ message }) {
 }
 
 export default function Deadlines() {
-  const { today, thisWeek, thisMonth, expired } = DATA;
+  const [data, setData] = useState({ today: [], thisWeek: [], thisMonth: [], expired: [] });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDeadlines = async () => {
+      try {
+        const { data: res } = await api.get('/api/opportunities/deadlines');
+        setData({
+          today: res.today.map(mapDeadline),
+          thisWeek: res.thisWeek.map(mapDeadline),
+          thisMonth: res.thisMonth.map(mapDeadline),
+          expired: res.expired.map(mapDeadline),
+        });
+      } catch (err) {
+        console.error('Deadlines fetch error:', err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDeadlines();
+  }, []);
+
+  const { today, thisWeek, thisMonth, expired } = data;
   const hasAny = today.length + thisWeek.length + thisMonth.length + expired.length > 0;
 
   return (
@@ -64,7 +70,11 @@ export default function Deadlines() {
           </p>
         </div>
 
-        {!hasAny ? (
+        {loading ? (
+          <div className="mt-10">
+            <LoadingSpinner label="Loading deadlines" />
+          </div>
+        ) : !hasAny ? (
           <div className="mt-10 rounded-3xl border border-dashed border-border bg-white py-16 text-center">
             <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-primary-50 text-primary-700">
               <CalendarCheck2 className="h-6 w-6" />
@@ -76,7 +86,6 @@ export default function Deadlines() {
           </div>
         ) : (
           <div className="mt-8 space-y-10">
-            {/* Today — urgent */}
             <section>
               <SectionHeader icon={CalendarClock} title="Today" count={today.length} tone="urgent" />
               <div className="mt-4 space-y-3">
@@ -88,7 +97,6 @@ export default function Deadlines() {
               </div>
             </section>
 
-            {/* This week */}
             <section>
               <SectionHeader icon={CalendarDays} title="This Week" count={thisWeek.length} />
               <div className="mt-4 space-y-3">
@@ -100,7 +108,6 @@ export default function Deadlines() {
               </div>
             </section>
 
-            {/* This month */}
             <section>
               <SectionHeader icon={CalendarDays} title="This Month" count={thisMonth.length} />
               <div className="mt-4 space-y-3">
@@ -112,7 +119,6 @@ export default function Deadlines() {
               </div>
             </section>
 
-            {/* Expired — muted */}
             <section>
               <SectionHeader icon={History} title="Expired" count={expired.length} tone="muted" />
               <div className="mt-4 space-y-2">

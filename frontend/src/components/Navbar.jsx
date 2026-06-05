@@ -6,7 +6,7 @@ const links = [
   { to: "/opportunities", label: "Opportunities", icon: Briefcase },
   { to: "/deadlines", label: "Deadlines", icon: CalendarClock },
   { to: "/resume", label: "Resume", icon: FileText },
-  { to: "/career", label: "Career AI", icon: Sparkles },
+  { to: "/career-intelligence", label: "Career AI", icon: Sparkles },
   { to: "/history", label: "History", icon: HistoryIcon },
 ];
 
@@ -38,7 +38,10 @@ export default function Navbar() {
           ))}
         </nav>
         <button
-          onClick={() => navigate("/login")}
+          onClick={() => {
+            localStorage.removeItem('launchpad_token');
+            navigate('/login');
+          }}
           className="rounded-lg border border-border bg-white px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
         >
           Sign out

@@ -1,13 +1,57 @@
-import Navbar from "../components/Navbar.jsx";
-import { Sparkles, TrendingUp, Target, BookOpen } from "lucide-react";
-
-const insights = [
-  { icon: TrendingUp, title: "Trending roles for CSE '26", body: "ML Engineer roles are up 38% this season. Consider tailoring your resume." },
-  { icon: Target, title: "Your match strength", body: "Strongest for Backend & Systems roles. Weakest for Product Management." },
-  { icon: BookOpen, title: "Skill to learn next", body: "Distributed systems — 6 of your top matches require it." },
-];
+import { useEffect, useState } from 'react';
+import Navbar from '../components/Navbar.jsx';
+import api from '../lib/api.js';
+import { Sparkles, TrendingUp, Target, BookOpen } from 'lucide-react';
 
 export default function CareerIntelligence() {
+  const [stats, setStats] = useState(null);
+  const [profile, setProfile] = useState(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [statsRes, profileRes] = await Promise.all([
+          api.get('/api/opportunities/stats'),
+          api.get('/api/profile').catch(() => ({ data: null })),
+        ]);
+        setStats(statsRes.data);
+        setProfile(profileRes.data);
+      } catch (err) {
+        console.error('Career intelligence fetch error:', err.message);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const topType = stats?.byType
+    ? Object.entries(stats.byType).sort((a, b) => b[1] - a[1])[0]
+    : null;
+
+  const insights = [
+    {
+      icon: TrendingUp,
+      title: topType ? `Trending: ${topType[0]} roles` : 'Trending roles for you',
+      body: topType
+        ? `${topType[1]} ${topType[0]} opportunities detected from your inbox. Consider tailoring your resume.`
+        : 'Connect Gmail and complete onboarding to see trending role insights.',
+    },
+    {
+      icon: Target,
+      title: 'Your match strength',
+      body: stats
+        ? `Average match score is ${stats.averageMatchPercentage}%. ${stats.byMatchStatus?.['High Match'] || 0} high-match opportunities found.`
+        : 'Upload your resume and add skills to unlock match insights.',
+    },
+    {
+      icon: BookOpen,
+      title: 'Skill to learn next',
+      body: profile?.skills?.length
+        ? `Your profile lists ${profile.skills.length} skills. Keep refining them as new opportunities arrive.`
+        : 'Add skills to your profile to get personalized skill recommendations.',
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-muted/30">
       <Navbar />

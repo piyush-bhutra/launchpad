@@ -1,17 +1,42 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Mail, GraduationCap, Target, Check } from "lucide-react";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Mail, GraduationCap, Target, Check } from 'lucide-react';
+import api from '../lib/api.js';
 
 const steps = [
-  { icon: Mail, title: "Connect Gmail", body: "Grant read-only access so Launchpad can scan opportunity emails." },
-  { icon: GraduationCap, title: "Your profile", body: "Tell us your branch, year, and interests for better matches." },
-  { icon: Target, title: "Pick categories", body: "Choose what to track: internships, placements, research, hackathons." },
+  { icon: Mail, title: 'Connect Gmail', body: 'Grant read-only access so Launchpad can scan opportunity emails.' },
+  { icon: GraduationCap, title: 'Your profile', body: 'Tell us your branch, year, and interests for better matches.' },
+  { icon: Target, title: 'Pick categories', body: 'Choose what to track: internships, placements, research, hackathons.' },
 ];
 
 export default function Onboarding() {
   const [step, setStep] = useState(0);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const Active = steps[step].icon;
+
+  const handleContinue = async () => {
+    if (step === 0) {
+      window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
+      return;
+    }
+
+    if (step === steps.length - 1) {
+      setLoading(true);
+      try {
+        await api.post('/api/profile', { skills: [] });
+        navigate('/dashboard');
+      } catch (err) {
+        console.error('Onboarding profile save failed:', err.message);
+        navigate('/dashboard');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    setStep((s) => s + 1);
+  };
 
   return (
     <div className="min-h-screen bg-muted/40 px-6 py-16">
@@ -19,10 +44,10 @@ export default function Onboarding() {
         <div className="flex items-center justify-between">
           {steps.map((s, i) => (
             <div key={s.title} className="flex flex-1 items-center gap-2">
-              <div className={`grid h-8 w-8 place-items-center rounded-full text-xs font-semibold ${i <= step ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+              <div className={`grid h-8 w-8 place-items-center rounded-full text-xs font-semibold ${i <= step ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
                 {i < step ? <Check className="h-4 w-4" /> : i + 1}
               </div>
-              {i < steps.length - 1 && <div className={`h-px flex-1 ${i < step ? "bg-primary" : "bg-border"}`} />}
+              {i < steps.length - 1 && <div className={`h-px flex-1 ${i < step ? 'bg-primary' : 'bg-border'}`} />}
             </div>
           ))}
         </div>
@@ -42,10 +67,11 @@ export default function Onboarding() {
             Back
           </button>
           <button
-            onClick={() => (step === steps.length - 1 ? navigate("/dashboard") : setStep((s) => s + 1))}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-700"
+            onClick={handleContinue}
+            disabled={loading}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-700 disabled:opacity-50"
           >
-            {step === steps.length - 1 ? "Go to dashboard" : "Continue"}
+            {loading ? 'Saving…' : step === 0 ? 'Connect Gmail' : step === steps.length - 1 ? 'Go to dashboard' : 'Continue'}
           </button>
         </div>
       </div>

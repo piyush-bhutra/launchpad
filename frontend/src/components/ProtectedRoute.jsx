@@ -1,4 +1,11 @@
+import { Navigate } from 'react-router-dom';
+
 export default function ProtectedRoute({ children }) {
-  // Simple pass-through wrapper for protected routes
+  const token = localStorage.getItem('launchpad_token');
+
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+
   return children;
 }
