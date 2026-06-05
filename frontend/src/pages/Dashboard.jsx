@@ -1,0 +1,2 @@
+// User dashboard page
+export {};

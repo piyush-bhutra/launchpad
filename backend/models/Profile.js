@@ -1,0 +1,2 @@
+// Profile Mongoose model
+export {};

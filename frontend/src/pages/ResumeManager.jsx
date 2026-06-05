@@ -1,0 +1,2 @@
+// Resume manager page
+export {};

@@ -1,0 +1,2 @@
+// Opportunity Mongoose model
+export {};

@@ -1,0 +1,24 @@
+{
+  "name": "launchpad-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "express": "*",
+    "mongoose": "*",
+    "dotenv": "*",
+    "cors": "*",
+    "node-cron": "*",
+    "axios": "*",
+    "googleapis": "*",
+    "google-auth-library": "*",
+    "@google/generative-ai": "*",
+    "jsonwebtoken": "*",
+    "bcryptjs": "*",
+    "multer": "*",
+    "pdf-parse": "*",
+    "nodemailer": "*"
+  },
+  "devDependencies": {
+    "nodemon": "*"
+  }
+}

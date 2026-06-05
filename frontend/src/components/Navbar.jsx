@@ -1,0 +1,2 @@
+// Navigation bar component
+export {};

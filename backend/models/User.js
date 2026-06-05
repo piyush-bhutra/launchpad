@@ -1,0 +1,2 @@
+// User Mongoose model
+export {};

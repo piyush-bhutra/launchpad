@@ -1,0 +1,18 @@
+{
+  "name": "launchpad-frontend",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "react": "*",
+    "react-dom": "*",
+    "react-router-dom": "*",
+    "axios": "*"
+  },
+  "devDependencies": {
+    "vite": "*",
+    "@vitejs/plugin-react": "*",
+    "tailwindcss": "*",
+    "postcss": "*",
+    "autoprefixer": "*"
+  }
+}

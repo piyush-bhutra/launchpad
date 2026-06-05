@@ -1,0 +1,2 @@
+// PostCSS configuration
+export default {};
