@@ -5,6 +5,7 @@ import Opportunity from '../models/Opportunity.js';
 import { verifyToken } from '../middleware/authMiddleware.js';
 import { resume as resumeUpload } from '../middleware/uploadMiddleware.js';
 import { calculateMatch } from '../services/matchingService.js';
+import { extractSkillsFromResume } from '../services/llmService.js';
 
 const router = express.Router();
 
@@ -31,16 +32,19 @@ router.post('/upload', verifyToken, (req, res, next) => {
       profile = await Profile.create({ userId: req.user.userId });
     }
 
+    const extractedSkills = await extractSkillsFromResume(resumeText);
+    console.log(`[Resume] Extracted ${extractedSkills.length} skills from resume`);
+
     profile.resumeText = resumeText;
     profile.resumeUploadedAt = new Date();
+    if (extractedSkills.length > 0) {
+      profile.skills = extractedSkills;
+    }
     await profile.save();
 
-    const pendingOpportunities = await Opportunity.find({
-      userId: req.user.userId,
-      matchStatus: 'Pending',
-    });
+    const opportunities = await Opportunity.find({ userId: req.user.userId });
 
-    for (const opportunity of pendingOpportunities) {
+    for (const opportunity of opportunities) {
       const { matchPercentage, matchStatus } = calculateMatch(opportunity, profile);
       opportunity.matchPercentage = matchPercentage;
       opportunity.matchStatus = matchStatus;
@@ -50,6 +54,8 @@ router.post('/upload', verifyToken, (req, res, next) => {
     res.status(200).json({
       message: 'Resume uploaded successfully.',
       characterCount: resumeText.length,
+      skillsExtracted: extractedSkills.length,
+      skills: profile.skills || [],
     });
   } catch (error) {
     console.error('Resume upload error:', error.message);

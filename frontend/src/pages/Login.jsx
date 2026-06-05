@@ -27,7 +27,8 @@ export default function Login() {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    window.location.href = `${apiUrl}/auth/google`;
   };
 
   return (
@@ -78,7 +79,7 @@ export default function Login() {
           onClick={handleGoogleLogin}
           className="mt-3 w-full rounded-lg border border-border py-2.5 text-sm font-semibold hover:bg-muted"
         >
-          Connect Gmail
+          Continue with Google
         </button>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">

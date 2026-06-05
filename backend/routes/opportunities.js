@@ -1,6 +1,7 @@
 import express from 'express';
 import Opportunity from '../models/Opportunity.js';
 import { verifyToken } from '../middleware/authMiddleware.js';
+import { runInitialScan } from '../jobs/emailPoller.js';
 
 const router = express.Router();
 
@@ -94,6 +95,26 @@ router.get('/stats', verifyToken, async (req, res) => {
   } catch (error) {
     console.error('Get stats error:', error.message);
     res.status(500).json({ message: 'Failed to fetch stats.' });
+  }
+});
+
+router.post('/scan', verifyToken, async (req, res) => {
+  try {
+    console.log(`[Scan] Manual scan requested by user ${req.user.userId}`);
+    const result = await runInitialScan(req.user.userId, { bypassOnboarding: true });
+
+    res.status(200).json({
+      success: true,
+      scanned: result.saved,
+      emailsFound: result.emailsFound,
+      extractionsAttempted: result.extractionsAttempted,
+      opportunitiesSaved: result.opportunitiesSaved,
+      skipped: result.skipped,
+      errors: result.errors,
+    });
+  } catch (error) {
+    console.error('Manual scan error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

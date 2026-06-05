@@ -8,6 +8,7 @@ import authRoutes from './routes/auth.js';
 import opportunityRoutes from './routes/opportunities.js';
 import resumeRoutes from './routes/resume.js';
 import profileRoutes from './routes/profile.js';
+import { startEmailPoller } from './jobs/emailPoller.js';
 
 const app = express();
 
@@ -44,7 +45,7 @@ async function startServer() {
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
-      // In production, call startEmailPoller() here to begin polling Gmail for opportunities.
+      startEmailPoller();
     });
   } catch (error) {
     console.error('Failed to start server:', error.message);

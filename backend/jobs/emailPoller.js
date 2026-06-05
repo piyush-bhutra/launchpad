@@ -6,10 +6,37 @@ import { fetchRecentEmails } from '../services/gmailService.js';
 import { extractOpportunityData } from '../services/llmService.js';
 import { calculateMatch } from '../services/matchingService.js';
 
-async function processEmail(user, email, profile) {
+function createScanStats() {
+  return {
+    emailsFound: 0,
+    extractionsAttempted: 0,
+    opportunitiesSaved: 0,
+    skipped: 0,
+    errors: [],
+  };
+}
+
+async function processEmail(user, email, profile, stats) {
   try {
-    const existing = await Opportunity.findOne({ messageId: email.messageId });
-    if (existing) return false;
+    const existing = await Opportunity.findOne({
+      userId: user._id,
+      messageId: email.messageId,
+    });
+
+    if (existing) {
+      stats.skipped++;
+      console.log(`[Scan] Skipped duplicate messageId ${email.messageId}`);
+      return false;
+    }
+
+    if (!email.subject.match(/internship|placement|hiring|job|recruitment|career|scholarship|fellowship|research|apply now|registration open|opportunity/i)) {
+      console.log('[Scan] Skipping non-opportunity email:', email.subject);
+      stats.skipped++;
+      return false;
+    }
+
+    stats.extractionsAttempted++;
+    console.log(`[Scan] Gemini extraction attempted for: "${email.subject}"`);
 
     const extracted = await extractOpportunityData(
       email.body,
@@ -17,7 +44,11 @@ async function processEmail(user, email, profile) {
       email.date
     );
 
-    if (!extracted) return false;
+    if (!extracted) {
+      stats.skipped++;
+      console.log(`[Scan] Gemini returned null for: "${email.subject}"`);
+      return false;
+    }
 
     let matchPercentage = 0;
     let matchStatus = 'Pending';
@@ -45,50 +76,66 @@ async function processEmail(user, email, profile) {
       matchStatus,
     });
 
+    stats.opportunitiesSaved++;
+    console.log(`[Scan] Opportunity saved: "${extracted.title || email.subject}"`);
     return true;
   } catch (error) {
-    console.error(`Failed to process email ${email.messageId}:`, error.message);
+    stats.errors.push({ messageId: email.messageId, subject: email.subject, error: error.message });
+    console.error(`[Scan] Error processing ${email.messageId}:`, error.message);
     return false;
   }
 }
 
-async function processUserEmails(user, isFirstScan) {
-  try {
-    const profile = await Profile.findOne({ userId: user._id });
+async function processUserEmails(user, isFirstScan, options = {}) {
+  const { bypassOnboarding = false } = options;
+  const stats = createScanStats();
 
-    if (!profile?.onboardingComplete) {
-      console.log(`Skipping user ${user.email}: onboarding not complete.`);
-      return 0;
+  try {
+    let profile = await Profile.findOne({ userId: user._id });
+
+    if (!bypassOnboarding && !profile?.onboardingComplete) {
+      console.log(`[Scan] Skipping user ${user.email}: onboarding not complete.`);
+      return { saved: 0, ...stats };
     }
 
-    const emails = await fetchRecentEmails(user, isFirstScan);
-    let savedCount = 0;
-    let skippedCount = 0;
-
-    for (const email of emails) {
-      const saved = await processEmail(user, email, profile);
-      if (saved) {
-        savedCount++;
-      } else {
-        skippedCount++;
+    if (bypassOnboarding) {
+      if (!profile) {
+        profile = await Profile.create({ userId: user._id, onboardingComplete: true });
+        console.log(`[Scan] Created profile with onboardingComplete for ${user.email}`);
+      } else if (!profile.onboardingComplete) {
+        profile.onboardingComplete = true;
+        await profile.save();
+        console.log(`[Scan] Marked onboardingComplete for ${user.email}`);
       }
     }
 
+    console.log(`[Scan] Fetching Gmail messages for ${user.email} (firstScan=${isFirstScan})`);
+    const emails = await fetchRecentEmails(user, isFirstScan);
+    stats.emailsFound = emails.length;
+    console.log(`[Scan] Gmail messages found: ${emails.length}`);
+
+    for (const email of emails) {
+      await processEmail(user, email, profile, stats);
+    }
+
     console.log(
-      `User ${user.email}: ${savedCount} new opportunities saved, ${skippedCount} skipped, ${emails.length} emails processed.`
+      `[Scan] User ${user.email} complete — saved: ${stats.opportunitiesSaved}, ` +
+      `skipped: ${stats.skipped}, extractions: ${stats.extractionsAttempted}, ` +
+      `errors: ${stats.errors.length}`
     );
 
-    return savedCount;
+    return { saved: stats.opportunitiesSaved, ...stats };
   } catch (error) {
-    console.error(`Email poll failed for user ${user.email}:`, error.message);
-    return 0;
+    stats.errors.push({ error: error.message });
+    console.error(`[Scan] Email poll failed for user ${user.email}:`, error.message);
+    return { saved: 0, ...stats };
   }
 }
 
 export function startEmailPoller() {
   cron.schedule('*/30 * * * *', async () => {
     try {
-      console.log('Starting scheduled email poll...');
+      console.log('[Poller] Starting scheduled email poll...');
 
       const users = await User.find({
         encryptedRefreshToken: { $exists: true, $ne: null },
@@ -98,16 +145,16 @@ export function startEmailPoller() {
         await processUserEmails(user, false);
       }
 
-      console.log('Scheduled email poll completed.');
+      console.log('[Poller] Scheduled email poll completed.');
     } catch (error) {
-      console.error('Email poller error:', error.message);
+      console.error('[Poller] Email poller error:', error.message);
     }
   });
 
-  console.log('Email poller scheduled to run every 30 minutes.');
+  console.log('Email poller started');
 }
 
-export async function runInitialScan(userId) {
+export async function runInitialScan(userId, options = {}) {
   try {
     const user = await User.findById(userId);
 
@@ -119,9 +166,9 @@ export async function runInitialScan(userId) {
       throw new Error('User has no Gmail connection.');
     }
 
-    return await processUserEmails(user, true);
+    return await processUserEmails(user, true, options);
   } catch (error) {
-    console.error('Initial scan error:', error.message);
+    console.error('[Scan] Initial scan error:', error.message);
     throw error;
   }
 }

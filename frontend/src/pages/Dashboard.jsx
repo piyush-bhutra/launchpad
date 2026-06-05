@@ -82,7 +82,15 @@ export default function Dashboard() {
     fetchData();
   }, []);
 
-  const handleRefresh = () => fetchData(search);
+  const handleRefresh = async () => {
+    setLoading(true);
+    try {
+      await api.post('/api/opportunities/scan');
+    } catch (err) {
+      console.error('Inbox scan error:', err.response?.data?.message || err.message);
+    }
+    await fetchData(search);
+  };
 
   const handleSearch = (e) => {
     e.preventDefault();

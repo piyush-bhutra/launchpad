@@ -1,20 +1,34 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
+import api from '../lib/api.js';
 
 export default function AuthCallback() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
+    const completeAuth = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token');
 
-    if (token) {
+      if (!token) {
+        navigate('/login', { replace: true });
+        return;
+      }
+
       localStorage.setItem('launchpad_token', token);
+
+      try {
+        await api.post('/api/profile', { skills: [] });
+        await api.post('/api/opportunities/scan');
+      } catch (err) {
+        console.error('Post-OAuth setup error:', err.response?.data?.message || err.message);
+      }
+
       navigate('/dashboard', { replace: true });
-    } else {
-      navigate('/login', { replace: true });
-    }
+    };
+
+    completeAuth();
   }, [navigate]);
 
   return (
