@@ -1,2 +1,4 @@
-// Wrapper for protected routes
-export {};
+export default function ProtectedRoute({ children }) {
+  // Simple pass-through wrapper for protected routes
+  return children;
+}
