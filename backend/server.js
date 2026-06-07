@@ -3,6 +3,7 @@ dotenv.config();
 
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import connectDB from './config/db.js';
 import authRoutes from './routes/auth.js';
 import opportunityRoutes from './routes/opportunities.js';
@@ -20,6 +21,7 @@ app.use(
 );
 
 app.use(express.json());
+app.use(cookieParser());
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });

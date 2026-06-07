@@ -41,6 +41,7 @@ router.post('/upload', verifyToken, (req, res, next) => {
       profile.skills = extractedSkills;
     }
     await profile.save();
+    console.log(`[Resume Flow] Resume and ${profile.skills.length} skills saved to Profile (userId: ${req.user.userId})`);
 
     const opportunities = await Opportunity.find({ userId: req.user.userId });
 

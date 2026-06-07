@@ -24,7 +24,7 @@ export default function Onboarding() {
     if (step === steps.length - 1) {
       setLoading(true);
       try {
-        await api.post('/api/profile', { skills: [] });
+        await api.post('/api/profile', {});
         navigate('/dashboard');
       } catch (err) {
         console.error('Onboarding profile save failed:', err.message);

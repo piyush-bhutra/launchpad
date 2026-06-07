@@ -138,8 +138,14 @@ router.post('/login', async (req, res) => {
       { expiresIn: '7d' }
     );
 
+    res.cookie('launchpad_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
     res.status(200).json({
-      token,
       user: sanitizeUser(user),
     });
   } catch (error) {
@@ -275,7 +281,14 @@ router.get('/google/callback', async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${jwtToken}`);
+    res.cookie('launchpad_token', jwtToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.redirect(`${process.env.FRONTEND_URL}/auth/callback`);
   } catch (error) {
     console.error('Google callback error:', error.message);
     res.status(500).json({ message: 'Google authentication failed.' });
@@ -294,6 +307,15 @@ router.get('/me', verifyToken, async (req, res) => {
     console.error('Get me error:', error.message);
     res.status(500).json({ message: 'Failed to fetch user profile.' });
   }
+});
+
+router.post('/logout', (req, res) => {
+  res.clearCookie('launchpad_token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  });
+  res.status(200).json({ message: 'Logged out successfully' });
 });
 
 export default router;

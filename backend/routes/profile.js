@@ -25,6 +25,7 @@ router.get('/', verifyToken, async (req, res) => {
       return res.status(404).json({ message: 'Profile not found.' });
     }
 
+    console.log(`[Resume Flow] Profile loaded for user ${req.user.userId}. Skills count: ${profile.skills?.length || 0}`);
     res.status(200).json(profile);
   } catch (error) {
     console.error('Get profile error:', error.message);

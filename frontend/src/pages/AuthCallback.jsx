@@ -8,24 +8,14 @@ export default function AuthCallback() {
 
   useEffect(() => {
     const completeAuth = async () => {
-      const params = new URLSearchParams(window.location.search);
-      const token = params.get('token');
-
-      if (!token) {
-        navigate('/login', { replace: true });
-        return;
-      }
-
-      localStorage.setItem('launchpad_token', token);
-
       try {
-        await api.post('/api/profile', { skills: [] });
+        await api.post('/api/profile', {});
         await api.post('/api/opportunities/scan');
+        navigate('/dashboard', { replace: true });
       } catch (err) {
         console.error('Post-OAuth setup error:', err.response?.data?.message || err.message);
+        navigate('/login', { replace: true });
       }
-
-      navigate('/dashboard', { replace: true });
     };
 
     completeAuth();

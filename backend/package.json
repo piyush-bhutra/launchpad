@@ -7,20 +7,21 @@
     "dev": "nodemon server.js"
   },
   "dependencies": {
-    "express": "*",
-    "mongoose": "*",
-    "dotenv": "*",
-    "cors": "*",
-    "node-cron": "*",
-    "axios": "*",
-    "googleapis": "*",
-    "google-auth-library": "*",
     "@google/generative-ai": "*",
-    "jsonwebtoken": "*",
+    "axios": "*",
     "bcryptjs": "*",
+    "cookie-parser": "^1.4.7",
+    "cors": "*",
+    "dotenv": "*",
+    "express": "*",
+    "google-auth-library": "*",
+    "googleapis": "*",
+    "jsonwebtoken": "*",
+    "mongoose": "*",
     "multer": "*",
-    "pdf-parse": "*",
-    "nodemailer": "*"
+    "node-cron": "*",
+    "nodemailer": "*",
+    "pdf-parse": "*"
   },
   "devDependencies": {
     "nodemon": "*"

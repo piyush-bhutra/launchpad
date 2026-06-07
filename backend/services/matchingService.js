@@ -8,8 +8,11 @@ function mapMatchStatus(matchPercentage) {
 export function calculateMatch(opportunity, profile) {
   try {
     if (!profile?.skills || profile.skills.length === 0) {
+      console.log(`[Matching] No skills found for profile. Opportunity gets 0%.`);
       return { matchPercentage: 0, matchStatus: 'Pending' };
     }
+
+    console.log(`[Matching] Calculating match for "${opportunity.title || 'Opportunity'}" using ${profile.skills.length} stored skills.`);
 
     const combinedText = [
       opportunity.title,

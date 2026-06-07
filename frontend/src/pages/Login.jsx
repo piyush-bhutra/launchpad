@@ -16,8 +16,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const { data } = await api.post('/auth/login', { email, password });
-      localStorage.setItem('launchpad_token', data.token);
+      await api.post('/auth/login', { email, password });
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please try again.');

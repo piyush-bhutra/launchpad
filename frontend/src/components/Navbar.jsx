@@ -1,5 +1,6 @@
 import { NavLink, Link, useNavigate } from "react-router-dom";
 import { Rocket, LayoutDashboard, Briefcase, CalendarClock, FileText, Sparkles, History as HistoryIcon } from "lucide-react";
+import api from "../lib/api.js";
 
 const links = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -38,8 +39,12 @@ export default function Navbar() {
           ))}
         </nav>
         <button
-          onClick={() => {
-            localStorage.removeItem('launchpad_token');
+          onClick={async () => {
+            try {
+              await api.post('/auth/logout');
+            } catch (err) {
+              console.error(err);
+            }
             navigate('/login');
           }}
           className="rounded-lg border border-border bg-white px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
