@@ -22,7 +22,7 @@
     "multer": "*",
     "node-cron": "*",
     "nodemailer": "*",
-    "pdf-parse": "*"
+    "pdf-parse": "1.1.1"
   },
   "devDependencies": {
     "nodemon": "*"

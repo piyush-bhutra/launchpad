@@ -19,10 +19,176 @@
 }
 
 html, body, #root { height: 100%; }
+.bg-retro-grid {
+  background-color: #f8fafc;
+  background-image: radial-gradient(#cbd5e1 2px, transparent 2px);
+  background-size: 32px 32px;
+}
 body {
-  background-color: var(--color-background);
-  color: var(--color-foreground);
-  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+.retro-3d {
+  display: inline-block;
+  transform: rotate(-2deg);
+  font-family: 'Press Start 2P', monospace;
+  line-height: 1.5;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), text-shadow 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  cursor: default;
+}
+
+.retro-3d:hover {
+  transform: rotate(-4deg) scale(1.05);
+}
+
+.retro-3d-purple {
+  color: #d8b4fe;
+  text-shadow: 
+    1px 1px 0 #581c87, 2px 2px 0 #581c87, 3px 3px 0 #581c87, 4px 4px 0 #581c87, 
+    5px 5px 0 #581c87, 6px 6px 0 #581c87, 7px 7px 0 #581c87, 8px 8px 0 #581c87,
+    9px 9px 0 #581c87, 10px 10px 0 #581c87;
+}
+.retro-3d-purple:hover {
+  text-shadow: 
+    1px 1px 0 #581c87, 2px 2px 0 #581c87, 3px 3px 0 #581c87, 4px 4px 0 #581c87, 
+    5px 5px 0 #581c87, 6px 6px 0 #581c87, 7px 7px 0 #581c87, 8px 8px 0 #581c87,
+    9px 9px 0 #581c87, 10px 10px 0 #581c87, 11px 11px 0 #581c87, 12px 12px 0 #581c87,
+    13px 13px 0 #581c87, 14px 14px 0 #581c87, 15px 15px 0 #581c87,
+    25px 25px 15px rgba(0,0,0,0.3);
+}
+
+.retro-3d-blue {
+  color: #bfdbfe;
+  text-shadow: 
+    1px 1px 0 #1e3a8a, 2px 2px 0 #1e3a8a, 3px 3px 0 #1e3a8a, 4px 4px 0 #1e3a8a, 
+    5px 5px 0 #1e3a8a, 6px 6px 0 #1e3a8a, 7px 7px 0 #1e3a8a, 8px 8px 0 #1e3a8a,
+    9px 9px 0 #1e3a8a, 10px 10px 0 #1e3a8a;
+}
+.retro-3d-blue:hover {
+  text-shadow: 
+    1px 1px 0 #1e3a8a, 2px 2px 0 #1e3a8a, 3px 3px 0 #1e3a8a, 4px 4px 0 #1e3a8a, 
+    5px 5px 0 #1e3a8a, 6px 6px 0 #1e3a8a, 7px 7px 0 #1e3a8a, 8px 8px 0 #1e3a8a,
+    9px 9px 0 #1e3a8a, 10px 10px 0 #1e3a8a, 11px 11px 0 #1e3a8a, 12px 12px 0 #1e3a8a,
+    13px 13px 0 #1e3a8a, 14px 14px 0 #1e3a8a, 15px 15px 0 #1e3a8a,
+    25px 25px 15px rgba(0,0,0,0.3);
+}
+
+@keyframes hazard-flow {
+  0% { background-position: 0 0; }
+  100% { background-position: 28px 0; }
+}
+
+.hazard-hover {
+  background-image: none;
+  background-size: 28px 28px;
+}
+
+.hazard-hover:hover {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    #000000 0px,
+    #000000 10px,
+    #facc15 10px,
+    #facc15 20px
+  );
+  animation: hazard-flow 0.5s linear infinite;
+  color: #ffffff;
+  text-shadow: 2px 2px 0px #000;
+}
+
+@keyframes siren-spin {
+  0% { transform: scaleX(1); }
+  50% { transform: scaleX(-1); }
+  100% { transform: scaleX(1); }
+}
+
+
+
+.retro-3d-purple {
+  color: #d8b4fe;
+  text-shadow: 
+    1px 1px 0 #581c87, 
+    2px 2px 0 #581c87, 
+    3px 3px 0 #581c87, 
+    4px 4px 0 #581c87, 
+    5px 5px 0 #581c87, 
+    6px 6px 0 #581c87, 
+    7px 7px 0 #581c87, 
+    8px 8px 0 #581c87;
+}
+
+.retro-3d-blue {
+  color: #bfdbfe;
+  text-shadow: 
+    1px 1px 0 #1e3a8a, 
+    2px 2px 0 #1e3a8a, 
+    3px 3px 0 #1e3a8a, 
+    4px 4px 0 #1e3a8a, 
+    5px 5px 0 #1e3a8a, 
+    6px 6px 0 #1e3a8a, 
+    7px 7px 0 #1e3a8a, 
+    8px 8px 0 #1e3a8a;
+}
+
+@keyframes flicker {
+  0%, 19.999%, 22%, 62.999%, 64%, 64.999%, 70%, 100% {
+    opacity: 1;
+  }
+  20%, 21.999%, 63%, 63.999%, 65%, 69.999% {
+    opacity: 0.3;
+  }
+}
+
+.animate-flicker {
+  animation: flicker 4s infinite;
+}
+
+@keyframes marquee-left {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes marquee-right {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
+
+.animate-marquee-left {
+  animation: marquee-left 20s linear infinite;
+}
+
+.animate-marquee-right {
+  animation: marquee-right 20s linear infinite;
+}
+
+@keyframes scan {
+  0% { top: -20%; }
+  100% { top: 120%; }
+}
+.animate-scan {
+  animation: scan 2s linear infinite;
+}
+.group:hover .group-hover\:animate-scan {
+  animation: scan 1.5s linear infinite;
+}
+
+@keyframes shake-pop {
+  0%, 100% { transform: translateY(-8px) rotate(0deg); box-shadow: 12px 12px 0px #000; }
+  25% { transform: translateY(-8px) rotate(-3deg); box-shadow: 12px 12px 0px #000; }
+  50% { transform: translateY(-8px) rotate(3deg); box-shadow: 12px 12px 0px #000; }
+  75% { transform: translateY(-8px) rotate(-3deg); box-shadow: 12px 12px 0px #000; }
+}
+.hover\:animate-shake-pop:hover {
+  animation: shake-pop 0.15s ease-in-out infinite;
+}
+
+@keyframes ring {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-20deg); }
+  50% { transform: rotate(20deg); }
+  75% { transform: rotate(-20deg); }
+}
+.group:hover .group-hover\:animate-ring {
+  animation: ring 0.1s ease-in-out infinite;
 }

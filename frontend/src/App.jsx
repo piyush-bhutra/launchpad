@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import Landing from './pages/Landing.jsx';
 import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
@@ -11,8 +12,25 @@ import ResumeManager from './pages/ResumeManager.jsx';
 import CareerIntelligence from './pages/CareerIntelligence.jsx';
 import History from './pages/History.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
+import LoadingSpinner from './components/LoadingSpinner.jsx';
 
 export default function App() {
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setInitialLoading(false);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (initialLoading) {
+    return (
+      <div className="h-screen w-screen bg-white">
+        <LoadingSpinner fullscreen label="INITIALIZING LAUNCHPAD" />
+      </div>
+    );
+  }
   return (
     <Routes>
       <Route path="/" element={<Landing />} />

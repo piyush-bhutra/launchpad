@@ -13,7 +13,9 @@ import {
   Inbox,
   RefreshCw,
   Search,
+  Box,
 } from 'lucide-react';
+import Cityscape from '../components/Cityscape.jsx';
 
 function StatCard({ label, value, icon: Icon, hint }) {
   return (
@@ -56,6 +58,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [profile, setProfile] = useState(null);
   const [search, setSearch] = useState('');
+  const [is3DMode, setIs3DMode] = useState(true);
 
   const fetchData = async (searchQuery = '') => {
     setLoading(true);
@@ -134,6 +137,12 @@ export default function Dashboard() {
               />
             </form>
             <button
+              onClick={() => setIs3DMode(true)}
+              className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-700"
+            >
+              <Box className="h-4 w-4" /> Enter 3D City
+            </button>
+            <button
               onClick={handleRefresh}
               className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary-700"
             >
@@ -141,6 +150,13 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
+
+        {is3DMode && (
+          <Cityscape 
+            opportunities={opportunities} 
+            onClose={() => setIs3DMode(false)} 
+          />
+        )}
 
         <section className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {statCards.map((s) => <StatCard key={s.label} {...s} />)}
