@@ -10,8 +10,19 @@ import opportunityRoutes from './routes/opportunities.js';
 import resumeRoutes from './routes/resume.js';
 import profileRoutes from './routes/profile.js';
 import { startEmailPoller } from './jobs/emailPoller.js';
+import rateLimit from 'express-rate-limit';
 
 const app = express();
+
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: {
+    error: 'Too many requests, please try again later.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 app.use(
   cors({
@@ -22,6 +33,7 @@ app.use(
 
 app.use(express.json());
 app.use(cookieParser());
+app.use(generalLimiter);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });

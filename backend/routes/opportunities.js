@@ -2,8 +2,18 @@ import express from 'express';
 import Opportunity from '../models/Opportunity.js';
 import { verifyToken } from '../middleware/authMiddleware.js';
 import { runInitialScan } from '../jobs/emailPoller.js';
+import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
+const scanLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  message: {
+    error: 'Scan limit reached. You can manually scan 3 times per hour.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 const ALLOWED_STATUSES = [
   'Interested',
@@ -98,7 +108,7 @@ router.get('/stats', verifyToken, async (req, res) => {
   }
 });
 
-router.post('/scan', verifyToken, async (req, res) => {
+router.post('/scan', verifyToken, scanLimiter, async (req, res) => {
   try {
     console.log(`[Scan] Manual scan requested by user ${req.user.userId}`);
     const result = await runInitialScan(req.user.userId, { bypassOnboarding: true });
@@ -128,9 +138,13 @@ router.get('/', verifyToken, async (req, res) => {
     if (status) filter.status = status;
 
     if (search) {
-      const regex = new RegExp(search, 'i');
-      filter.$or = [{ title: regex }, { organization: regex }];
-    }
+  const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  filter.$or = [
+    { title: { $regex: escaped, $options: 'i' } },
+    { organization: { $regex: escaped, $options: 'i' } },
+  ];
+}
 
     const opportunities = await Opportunity.find(filter).sort({ deadline: 1 });
 
