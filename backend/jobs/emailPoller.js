@@ -5,6 +5,9 @@ import Opportunity from '../models/Opportunity.js';
 import { fetchRecentEmails } from '../services/gmailService.js';
 import { extractOpportunityData } from '../services/llmService.js';
 import { calculateMatch } from '../services/matchingService.js';
+
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 import { scanInProgress } from '../routes/opportunities.js';
 
 function createScanStats() {
@@ -44,6 +47,8 @@ async function processEmail(user, email, profile, stats) {
       email.subject,
       email.date
     );
+
+    await delay(500);
 
     if (!extracted) {
       stats.skipped++;
@@ -134,6 +139,11 @@ async function processUserEmails(user, isFirstScan, options = {}) {
 }
 
 export function startEmailPoller() {
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[Poller] Cron job disabled in development mode');
+    return;
+  }
+
   cron.schedule('*/30 * * * *', async () => {
     try {
       console.log('[Poller] Starting scheduled email poll...');
@@ -144,9 +154,9 @@ export function startEmailPoller() {
 
       for (const user of users) {
         try {
-          const userIdStr = user._id.toString();
-          if (scanInProgress.get(userIdStr)) {
-            console.log(`Skipping user scan, manual scan in progress: ${userIdStr}`);
+          const userId = user._id.toString();
+          if (scanInProgress.get(userId)) {
+            console.log('[Poller] Skipping user, scan already in progress:', userId);
             continue;
           }
           await processUserEmails(user, false);
@@ -176,7 +186,14 @@ export async function runInitialScan(userId, options = {}) {
       throw new Error('User has no Gmail connection.');
     }
 
-    return await processUserEmails(user, true, options);
+    const userIdStr = userId.toString();
+    scanInProgress.set(userIdStr, true);
+    
+    try {
+      return await processUserEmails(user, true, options);
+    } finally {
+      scanInProgress.delete(userIdStr);
+    }
   } catch (error) {
     console.error('[Scan] Initial scan error:', error.message);
     throw error;

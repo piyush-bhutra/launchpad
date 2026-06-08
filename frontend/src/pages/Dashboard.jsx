@@ -70,7 +70,11 @@ export default function Dashboard() {
         api.get('/api/profile').catch(() => ({ data: null })),
       ]);
 
-      setOpportunities(oppRes.data.map(mapOpportunity));
+      console.log('Opportunities API response:', oppRes.data);
+      const oppData = oppRes.data;
+      const opportunitiesArray = oppData.opportunities || oppData;
+
+      setOpportunities(opportunitiesArray.map(mapOpportunity));
       setStats(statsRes.data);
       setProfile(profileRes.data);
     } catch (err) {

@@ -1,13 +1,26 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 
-const SYSTEM_INSTRUCTION = `You extract structured opportunity data from college placement emails.
-Return ONLY valid JSON. No markdown. No explanation. No code blocks.
-Schema: { title: string|null, type: Internship|Placement|Hackathon|
-Research|Scholarship|Competition|Fellowship|Workshop|Conference|Other,
-organization: string|null, deadline: ISO8601 string|null,
-description: string max 200 chars|null, eligibility: string|null,
-requiredSkills: string[], applyLink: valid URL|null }
-Use null for unknown fields. For partial dates assume nearest future.`;
+// TODO: Get GEMINI_API_KEY from .env
+// TODO: Get GROQ_API_KEY from .env
+
+const SYSTEM_PROMPT = `You extract structured data from college placement emails.
+Return ONLY a valid JSON object, no markdown, no explanation.
+Schema: {
+  title: string or null,
+  type: one of [Internship, Placement, Hackathon, Research,
+    Scholarship, Competition, Fellowship, Workshop, Conference, Other],
+  organization: string or null,
+  deadline: ISO 8601 date string or null,
+  description: string max 150 chars or null,
+  eligibility: string max 100 chars or null,
+  requiredSkills: array of strings,
+  applyLink: valid URL string or null
+}
+Use null for any field you cannot determine.
+For deadline if only day and month mentioned assume current year.`;
+
+const delay = (ms) => new Promise(r => setTimeout(r, ms));
 
 function parseJsonResponse(text) {
   const cleaned = text
@@ -19,34 +32,107 @@ function parseJsonResponse(text) {
   return JSON.parse(cleaned);
 }
 
+function isLikelyOpportunity(subject, body) {
+  const text = (subject + ' ' + (body || '')).toLowerCase()
+  
+  const opportunityKeywords = [
+    'internship', 'placement', 'hackathon', 'hiring',
+    'apply', 'application', 'deadline', 'opportunity',
+    'fellowship', 'scholarship', 'competition', 'recruit',
+    'job', 'opening', 'registration', 'program', 'drive',
+    'campus', 'off campus', 'interview', 'shortlist',
+    'amazon', 'google', 'microsoft', 'goldman', 'ibm',
+    'dell', 'samsung', 'volvo', 'fresher', 'graduate',
+    'batch', 'eligible', 'apply now', 'last date',
+    'register', 'enroll', 'participate', 'submit',
+    'prize', 'reward', 'win', 'challenge', 'contest',
+    'research', 'intern', 'full time', 'part time',
+    'stipend', 'ctc', 'package', 'lpa', 'ppo'
+  ]
+
+  const hardSpamKeywords = [
+    'unsubscribe', 'payment receipt', 'invoice',
+    'order confirmation', 'your order', 'delivery update',
+    'otp', 'verification code', 'bank statement',
+    'electricity bill', 'water bill', 'recharge'
+  ]
+
+  const isHardSpam = hardSpamKeywords.some(k => text.includes(k))
+  if (isHardSpam) return false
+
+  const hasOpportunityKeyword = opportunityKeywords.some(k => 
+    text.includes(k)
+  )
+  return hasOpportunityKeyword
+}
+
+async function callGeminiWithRetry(model, prompt, retries = 1) {
+  try {
+    const result = await model.generateContent(prompt)
+    return result
+  } catch (error) {
+    if (error.message?.includes('429') && retries > 0) {
+      console.log('[Gemini] Rate limited, waiting 2s before retry...')
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      return callGeminiWithRetry(model, prompt, retries - 1)
+    }
+    throw error
+  }
+}
+
 export async function extractOpportunityData(emailBody, emailSubject, emailDate) {
   try {
-    console.log('[Gemini] Using model: gemini-2.5-flash');
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      systemInstruction: SYSTEM_INSTRUCTION,
-    });
+    if (!isLikelyOpportunity(emailSubject, emailBody)) {
+      console.log('[Scan] Skipping non-opportunity email:', emailSubject)
+      return null
+    }
+
+    await delay(300);
 
     const prompt = `Subject: ${emailSubject}\nDate: ${emailDate}\n\nBody:\n${emailBody}`;
 
-    const result = await model.generateContent(prompt);
-    const responseText = result.response.text();
+    console.log('[LLM] Trying Groq for:', emailSubject);
+    try {
+      const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+      const response = await groq.chat.completions.create({
+        model: 'llama-3.1-8b-instant',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.1,
+        max_tokens: 500
+      });
 
-    if (!responseText) {
-      return null;
+      const responseText = response.choices[0].message.content;
+      console.log('[LLM] Groq succeeded for:', emailSubject);
+      return parseJsonResponse(responseText);
+    } catch (groqError) {
+      console.log('[LLM] Groq failed, trying Gemini fallback for:', emailSubject);
+      console.log('[LLM] Trying Gemini for:', emailSubject);
+      
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({
+        model: 'gemini-1.5-flash',
+        systemInstruction: SYSTEM_PROMPT,
+      });
+
+      const fallbackResult = await callGeminiWithRetry(model, prompt);
+      const fallbackText = fallbackResult.response.text();
+      
+      if (!fallbackText) {
+        console.log('[LLM] Both providers failed for:', emailSubject);
+        return null;
+      }
+      console.log('[LLM] Gemini succeeded for:', emailSubject);
+      return parseJsonResponse(fallbackText);
     }
-
-    return parseJsonResponse(responseText);
   } catch (error) {
+    console.log('[LLM] Both providers failed for:', emailSubject);
     console.error('Failed to extract opportunity data:', error.message);
     return null;
   }
 }
-
-const SKILLS_INSTRUCTION = `Extract technical and professional skills from this resume text.
-Return ONLY a valid JSON array of skill strings. No markdown. No explanation.
-Example: ["Python", "React", "SQL", "Machine Learning"]`;
 
 export async function extractSkillsFromResume(resumeText) {
   try {
@@ -54,30 +140,59 @@ export async function extractSkillsFromResume(resumeText) {
       return [];
     }
 
-    console.log('[Gemini] Using model: gemini-2.5-flash');
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      systemInstruction: SKILLS_INSTRUCTION,
-    });
+    const systemPrompt = `You extract professional and technical skills from resumes.
+Return ONLY a valid JSON array of skill strings.
+No markdown, no explanation, no object wrapper.
+Example output: ["JavaScript", "React", "Node.js", "MongoDB"]
+Extract all technical skills, programming languages,
+frameworks, tools, and soft skills you can identify.
+Return empty array if no skills found.`;
 
-    const truncated = resumeText.slice(0, 15000);
-    const result = await model.generateContent(truncated);
-    const responseText = result.response.text();
+    console.log('[LLM] Trying Groq for skills extraction');
+    try {
+      const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+      const response = await groq.chat.completions.create({
+        model: 'llama-3.1-8b-instant',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: resumeText }
+        ],
+        temperature: 0.1,
+        max_tokens: 500
+      });
 
-    if (!responseText) {
+      const responseText = response.choices[0].message.content;
+      console.log('[LLM] Groq succeeded for skills extraction');
+      const parsed = parseJsonResponse(responseText);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((s) => typeof s === 'string' && s.trim());
+      }
+      return [];
+    } catch (groqError) {
+      console.log('[LLM] Groq failed, trying Gemini fallback for skills extraction');
+      
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({
+        model: 'gemini-1.5-flash-latest',
+        systemInstruction: systemPrompt,
+      });
+
+      const truncated = resumeText.slice(0, 15000);
+      const result = await callGeminiWithRetry(model, truncated);
+      const responseText = result.response.text();
+
+      if (!responseText) {
+        console.log('[LLM] Both providers failed for skills extraction');
+        return [];
+      }
+      
+      console.log('[LLM] Gemini succeeded for skills extraction');
+      const parsed = parseJsonResponse(responseText);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((s) => typeof s === 'string' && s.trim());
+      }
       return [];
     }
-
-    const parsed = parseJsonResponse(responseText);
-    if (Array.isArray(parsed)) {
-      return parsed.filter((s) => typeof s === 'string' && s.trim());
-    }
-    if (Array.isArray(parsed?.skills)) {
-      return parsed.skills.filter((s) => typeof s === 'string' && s.trim());
-    }
-
-    return [];
   } catch (error) {
     console.error('Failed to extract skills from resume:', error.message);
     return [];

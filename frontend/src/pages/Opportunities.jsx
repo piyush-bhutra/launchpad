@@ -29,7 +29,9 @@ export default function Opportunities() {
         if (query.trim()) params.search = query.trim();
 
         const { data } = await api.get('/api/opportunities', { params });
-        setOpportunities(data.map(mapOpportunity));
+        console.log('Opportunities API response:', data);
+        const opportunitiesArray = data.opportunities || data;
+        setOpportunities(opportunitiesArray.map(mapOpportunity));
       } catch (err) {
         console.error('Opportunities fetch error:', err.message);
         setOpportunities([]);

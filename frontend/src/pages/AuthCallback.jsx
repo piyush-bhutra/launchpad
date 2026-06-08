@@ -9,13 +9,19 @@ export default function AuthCallback() {
   useEffect(() => {
     const completeAuth = async () => {
       try {
-        await api.post('/api/profile', {});
-        await api.post('/api/opportunities/scan');
-        navigate('/dashboard', { replace: true });
+        await api.post('/api/profile', { skills: [] });
       } catch (err) {
-        console.error('Post-OAuth setup error:', err.response?.data?.message || err.message);
+        console.error('Profile setup error:', err);
         navigate('/login', { replace: true });
+        return;
       }
+      
+      // Fire scan without awaiting - it runs in background
+      api.post('/api/opportunities/scan').catch(err => 
+        console.error('Scan trigger error:', err)
+      );
+      
+      navigate('/dashboard', { replace: true });
     };
 
     completeAuth();

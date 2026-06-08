@@ -70,12 +70,16 @@ export async function fetchRecentEmails(user, isFirstScan) {
 
     if (!isFirstScan) {
       query += ' newer_than:2d';
+    } else {
+      query += ' newer_than:180d';
     }
+
+    const maxResults = isFirstScan ? 50 : 20;
 
     const listResponse = await gmail.users.messages.list({
       userId: 'me',
       q: query,
-      maxResults: 100,
+      maxResults: maxResults,
     });
 
     const messages = listResponse.data.messages;

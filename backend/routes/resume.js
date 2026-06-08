@@ -1,5 +1,5 @@
 import express from 'express';
-import { PDFParse } from 'pdf-parse';
+import pdfParse from 'pdf-parse/lib/pdf-parse.js';
 import Profile from '../models/Profile.js';
 import Opportunity from '../models/Opportunity.js';
 import { verifyToken } from '../middleware/authMiddleware.js';
@@ -22,9 +22,7 @@ router.post('/upload', verifyToken, (req, res, next) => {
       return res.status(400).json({ message: 'No PDF file uploaded.' });
     }
 
-    const parser = new PDFParse({ data: req.file.buffer });
-    const pdfData = await parser.getText();
-    await parser.destroy();
+    const pdfData = await pdfParse(req.file.buffer);
     const resumeText = pdfData.text;
 
     let profile = await Profile.findOne({ userId: req.user.userId });

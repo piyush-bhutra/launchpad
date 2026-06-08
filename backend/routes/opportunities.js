@@ -22,14 +22,6 @@ const scanLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-const ALLOWED_STATUSES = [
-  'Interested',
-  'Applied',
-  'Rejected',
-  'Completed',
-  'Ignored',
-  'New',
-];
 
 function startOfDay(date) {
   const d = new Date(date);
@@ -84,11 +76,13 @@ router.get('/deadlines', verifyToken, async (req, res) => {
 
 router.get('/stats', verifyToken, async (req, res) => {
   try {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
     const stats = await Opportunity.aggregate([
       { 
         $match: { 
-          userId: new mongoose.Types.ObjectId(req.user.userId),
-          $or: [{ deadline: null }, { deadline: { $gte: new Date() } }]
+          userId: new mongoose.Types.ObjectId(req.user.userId)
         } 
       },
       {
@@ -150,7 +144,7 @@ router.post('/scan', verifyToken, scanLimiter, async (req, res) => {
 
 router.get('/', verifyToken, async (req, res) => {
   try {
-    const { type, matchStatus, status, search } = req.query;
+    const { type, matchStatus, status, search, expired } = req.query;
 
     if (type) {
       const validTypes = ['Internship', 'Placement', 'Hackathon', 'Research', 'Scholarship', 'Competition', 'Fellowship', 'Workshop', 'Conference', 'Other'];
@@ -170,7 +164,15 @@ router.get('/', verifyToken, async (req, res) => {
       return res.status(400).json({ message: 'Search query too long.' });
     }
 
-    const filter = { userId: req.user.userId };
+    const filter = { 
+      userId: req.user.userId
+    };
+
+    if (expired === 'false') {
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      filter.$or = [{ deadline: null }, { deadline: { $gte: startOfToday } }];
+    }
 
     if (type) filter.type = type;
     if (matchStatus) filter.matchStatus = matchStatus;
@@ -178,7 +180,11 @@ router.get('/', verifyToken, async (req, res) => {
 
     if (search) {
       const regex = new RegExp(escapeRegex(search), 'i');
-      filter.$or = [{ title: regex }, { organization: regex }];
+      filter.$and = [
+        { $or: filter.$or },
+        { $or: [{ title: regex }, { organization: regex }] }
+      ];
+      delete filter.$or;
     }
 
     const page = Math.max(1, parseInt(req.query.page) || 1);

@@ -185,6 +185,7 @@ router.post('/login', loginLimiter, async (req, res) => {
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/'
     });
 
     res.status(200).json({
@@ -335,9 +336,11 @@ router.get('/google/callback', async (req, res) => {
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/'
     });
 
-    res.redirect(`${process.env.FRONTEND_URL}/auth/callback`);
+    const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+    res.redirect(`${frontendUrl}/auth/callback`);
   } catch (error) {
     console.error('Google callback error:', error.message);
     res.status(500).json({ message: 'Google authentication failed.' });
@@ -363,6 +366,7 @@ router.post('/logout', (req, res) => {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    path: '/'
   });
   res.status(200).json({ message: 'Logged out successfully' });
 });
