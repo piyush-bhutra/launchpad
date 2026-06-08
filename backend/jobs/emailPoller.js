@@ -5,6 +5,7 @@ import Opportunity from '../models/Opportunity.js';
 import { fetchRecentEmails } from '../services/gmailService.js';
 import { extractOpportunityData } from '../services/llmService.js';
 import { calculateMatch } from '../services/matchingService.js';
+import { scanInProgress } from '../routes/opportunities.js';
 
 function createScanStats() {
   return {
@@ -142,7 +143,16 @@ export function startEmailPoller() {
       });
 
       for (const user of users) {
-        await processUserEmails(user, false);
+        try {
+          const userIdStr = user._id.toString();
+          if (scanInProgress.get(userIdStr)) {
+            console.log(`Skipping user scan, manual scan in progress: ${userIdStr}`);
+            continue;
+          }
+          await processUserEmails(user, false);
+        } catch (userErr) {
+          console.error(`[Poller] Unexpected error for user ${user._id}:`, userErr.message);
+        }
       }
 
       console.log('[Poller] Scheduled email poll completed.');

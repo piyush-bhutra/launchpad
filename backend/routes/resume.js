@@ -45,11 +45,24 @@ router.post('/upload', verifyToken, (req, res, next) => {
 
     const opportunities = await Opportunity.find({ userId: req.user.userId });
 
-    for (const opportunity of opportunities) {
-      const { matchPercentage, matchStatus } = calculateMatch(opportunity, profile);
-      opportunity.matchPercentage = matchPercentage;
-      opportunity.matchStatus = matchStatus;
-      await opportunity.save();
+    if (opportunities.length > 0) {
+      await Opportunity.bulkWrite(
+        opportunities.map(opp => {
+          const match = calculateMatch(opp, profile);
+          return {
+            updateOne: {
+              filter: { _id: opp._id },
+              update: {
+                $set: {
+                  matchPercentage: match.matchPercentage,
+                  matchStatus: match.matchStatus
+                }
+              }
+            }
+          };
+        })
+      );
+      console.log(`Updated match scores for ${opportunities.length} opportunities`);
     }
 
     res.status(200).json({

@@ -9,7 +9,6 @@ const opportunitySchema = new mongoose.Schema({
   messageId: {
     type: String,
     required: true,
-    unique: true,
   },
   title: String,
   type: {
@@ -55,6 +54,7 @@ const opportunitySchema = new mongoose.Schema({
   },
 });
 
+opportunitySchema.index({ userId: 1, messageId: 1 }, { unique: true });
 opportunitySchema.index({ userId: 1, deadline: 1 });
 
 const Opportunity = mongoose.model('Opportunity', opportunitySchema);

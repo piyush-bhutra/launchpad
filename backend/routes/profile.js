@@ -37,6 +37,49 @@ router.post('/', verifyToken, async (req, res) => {
   try {
     const { name, branch, batch, cgpa, skills } = req.body;
 
+    if (name !== undefined) {
+      if (typeof name !== 'string' || name.length > 100) {
+        return res.status(400).json({ message: 'Name must be a string up to 100 characters.' });
+      }
+    }
+
+    if (branch !== undefined) {
+      const validBranches = ['CSE', 'ECE', 'EEE', 'IT', 'Mechanical', 'Civil', 'AIDS', 'CSBS', 'other'];
+      if (!validBranches.includes(branch)) {
+        return res.status(400).json({ message: `Branch must be one of: ${validBranches.join(', ')}` });
+      }
+    }
+
+    if (batch !== undefined) {
+      if (typeof batch !== 'string' || !/^\d{4}$/.test(batch)) {
+        return res.status(400).json({ message: 'Batch must be a 4 digit year string.' });
+      }
+      const year = parseInt(batch, 10);
+      if (year < 2015 || year > 2035) {
+        return res.status(400).json({ message: 'Batch must be between 2015 and 2035.' });
+      }
+    }
+
+    if (cgpa !== undefined) {
+      if (typeof cgpa !== 'number' || cgpa < 0 || cgpa > 10) {
+        return res.status(400).json({ message: 'CGPA must be a number between 0 and 10.' });
+      }
+    }
+
+    if (skills !== undefined) {
+      if (!Array.isArray(skills)) {
+        return res.status(400).json({ message: 'Skills must be an array of strings.' });
+      }
+      if (skills.length > 30) {
+        return res.status(400).json({ message: 'Skills array cannot exceed 30 items.' });
+      }
+      for (const skill of skills) {
+        if (typeof skill !== 'string' || skill.length > 50) {
+          return res.status(400).json({ message: 'Each skill must be a string up to 50 characters.' });
+        }
+      }
+    }
+
     let profile = await Profile.findOne({ userId: req.user.userId });
     const skillsUpdated = skills !== undefined;
 

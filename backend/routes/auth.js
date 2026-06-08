@@ -76,12 +76,20 @@ router.post('/register', registerLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required.' });
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({ message: 'Email must be a non-empty string.' });
     }
-
-    if (!isVitEmail(email)) {
-      return res.status(400).json({ message: 'Only @vitstudent.ac.in emails are allowed.' });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ message: 'Email format is invalid.' });
+    }
+    if (!email.endsWith('@vitstudent.ac.in')) {
+      return res.status(400).json({ message: 'Email must end with @vitstudent.ac.in.' });
+    }
+    if (!password || typeof password !== 'string' || password.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters.' });
+    }
+    if (!/\d/.test(password)) {
+      return res.status(400).json({ message: 'Password must contain at least one number.' });
     }
 
     const existingUser = await User.findOne({ email: email.toLowerCase() });
@@ -138,12 +146,14 @@ router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required.' });
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({ message: 'Email must be a non-empty string.' });
     }
-
-    if (!isVitEmail(email)) {
-      return res.status(400).json({ message: 'Only @vitstudent.ac.in emails are allowed.' });
+    if (!password || typeof password !== 'string') {
+      return res.status(400).json({ message: 'Password must be a non-empty string.' });
+    }
+    if (!email.endsWith('@vitstudent.ac.in')) {
+      return res.status(400).json({ message: 'Email must end with @vitstudent.ac.in.' });
     }
 
     const user = await User.findOne({ email: email.toLowerCase() });
@@ -190,16 +200,17 @@ router.post('/forgot-password', forgotPasswordLimiter, async (req, res) => {
   try {
     const { email } = req.body;
 
-    if (email) {
-      const user = await User.findOne({ email: email.toLowerCase() });
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({ message: 'Email must be a non-empty string.' });
+    }
+    const user = await User.findOne({ email: email.toLowerCase() });
 
-      if (user) {
-        const resetToken = crypto.randomBytes(32).toString('hex');
-        user.resetPasswordToken = resetToken;
-        user.resetPasswordExpiry = new Date(Date.now() + 60 * 60 * 1000);
-        await user.save();
-        await sendPasswordResetEmail(user.email, resetToken);
-      }
+    if (user) {
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      user.resetPasswordToken = resetToken;
+      user.resetPasswordExpiry = new Date(Date.now() + 60 * 60 * 1000);
+      await user.save();
+      await sendPasswordResetEmail(user.email, resetToken);
     }
 
     res.status(200).json({
@@ -215,8 +226,14 @@ router.post('/reset-password', resetPasswordLimiter, async (req, res) => {
   try {
     const { token, newPassword } = req.body;
 
-    if (!token || !newPassword) {
-      return res.status(400).json({ message: 'Token and new password are required.' });
+    if (!token || typeof token !== 'string') {
+      return res.status(400).json({ message: 'Token must be a non-empty string.' });
+    }
+    if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 8) {
+      return res.status(400).json({ message: 'New password must be at least 8 characters.' });
+    }
+    if (!/\d/.test(newPassword)) {
+      return res.status(400).json({ message: 'New password must contain at least one number.' });
     }
 
     const user = await User.findOne({
